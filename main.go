@@ -92,18 +92,14 @@ func (this *Cushion) Start() {
 
 func main() {
 
-	var wg sync.WaitGroup
-
 	cpus, _ := strconv.Atoi(os.Args[3])
 
 	runtime.GOMAXPROCS(cpus)
 
 	apiservice := Cushion{url: os.Args[1], port: ":" + os.Args[2]}
 
-	wg.Add(1)
-
 	go apiservice.Start()
 
-	wg.Wait()
+	select {}
 
 }
