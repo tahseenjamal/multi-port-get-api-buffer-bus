@@ -16,6 +16,7 @@ type Cushion struct {
 
 	url  string
 	port string
+	cpus int
 
 	http *http.Server
 
@@ -24,14 +25,12 @@ type Cushion struct {
 
 func (this *Cushion) InRequest(w http.ResponseWriter, r *http.Request) {
 
-	message := r.URL.RequestURI() + r.URL.RawQuery
+	message := r.URL.RequestURI()
 
 	this.MessageQueue <- message
 
-	w.WriteHeader(http.StatusOK)
+	//w.WriteHeader(http.StatusOK)
 	//w.Write([]byte("Requests on port " + this.port))
-
-	return
 
 }
 
@@ -51,14 +50,17 @@ func (this *Cushion) OutRequest() {
 
 	for {
 
-		requestURL := <-this.MessageQueue
+		for loop := 0; loop < this.cpus; loop++ {
 
-		this.wg.Add(1)
+			requestURL := <-this.MessageQueue
 
-		go this.CallURL(requestURL)
+			this.wg.Add(1)
+
+			go this.CallURL(requestURL)
+
+		}
 
 		this.wg.Wait()
-
 	}
 }
 
@@ -66,11 +68,11 @@ func (this *Cushion) QueueSize(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(strconv.Itoa(len(this.MessageQueue)) + " requests in buffer"))
 
-	return
-
 }
 
-func (this *Cushion) Start() {
+func (this *Cushion) Start(cpus int) {
+
+	this.cpus = cpus
 
 	this.MessageQueue = make(chan string, 100000)
 
@@ -96,10 +98,11 @@ func main() {
 
 	runtime.GOMAXPROCS(cpus)
 
+	//you can create mote objects like this in the next line and call its Start() function
 	apiservice := Cushion{url: os.Args[1], port: ":" + os.Args[2]}
+	apiservice.Start(cpus)
 
-	go apiservice.Start()
-
+	//This should be the last. All to be before this. This line is non-ending loop
 	select {}
 
 }
