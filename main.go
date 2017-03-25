@@ -16,6 +16,10 @@ type Cushion struct {
 
 	url  string
 	port string
+
+	//how much request buffering required
+	buffer int
+
 	cpus int
 
 	http *http.Server
@@ -70,11 +74,13 @@ func (this *Cushion) QueueSize(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (this *Cushion) Start(cpus int) {
+func (this *Cushion) Start(cpus int, buffer int) {
 
 	this.cpus = cpus
 
-	this.MessageQueue = make(chan string, 100000)
+	this.buffer = buffer
+
+	this.MessageQueue = make(chan string, this.buffer)
 
 	this.mux = http.NewServeMux()
 
@@ -94,13 +100,21 @@ func (this *Cushion) Start(cpus int) {
 
 func main() {
 
+	if len(os.Args) < 5 {
+
+		fmt.Println("Please pass Redirect URL Listener_Port Number_of_threads Buffer_Size")
+		os.Exit(0)
+	}
+
 	cpus, _ := strconv.Atoi(os.Args[3])
+
+	buffer, _ := strconv.Atoi(os.Args[4])
 
 	runtime.GOMAXPROCS(cpus)
 
 	//you can create mote objects like this in the next line and call its Start() function
 	apiservice := Cushion{url: os.Args[1], port: ":" + os.Args[2]}
-	apiservice.Start(cpus)
+	apiservice.Start(cpus, buffer)
 
 	//This should be the last. All to be before this. This line is non-ending loop
 	select {}
